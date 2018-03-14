@@ -165,7 +165,7 @@ def confirmRemoval(bot, update, user_data):
 
 def cancel(bot, update, user_data):
   user_data.clear()
-  bot.send_message(chat_id = update.message.chat_id, text = "Aktion abgebrochen. Alle zwischengespeicherten Daten wurden gelöscht.")
+  bot.send_message(chat_id = update.message.chat_id, text = "Aktion abgebrochen. Alle zwischengespeicherten Daten wurden gelöscht.", reply_markup = Keyboard(adminKeyboard))
   return ConversationHandler.END
 
 def Keyboard(keylist):
@@ -217,9 +217,6 @@ def main(updater):
   updater.idle()
 
   updater.stop()
-
-  dbFuncs.close()
-
 
 
 if __name__ == '__main__':
