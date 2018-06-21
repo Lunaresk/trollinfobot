@@ -9,7 +9,7 @@ import logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 ID, ALIAS, REASON, CONFIRM, SEND, CHANGE = range(6)
-adminKeyboard = [u'/add Troll hinzufügen', '/remove Troll entfernen', u'/change Trollinfos ändern (nicht implementiert)']
+adminKeyboard = [u'/add Troll hinzufügen', '/remove Troll entfernen', u'/change Trollinfos ändern']
 userKeyboard = ['/check Bin ich ein Troll?']
 channel = '@ufzfjfhdnfj'
 
@@ -160,8 +160,55 @@ def confirmRemoval(bot, update, user_data):
     bot.send_message(chat_id = update.message.chat_id, text = "Das habe ich nicht verstanden. Bitte sende 'Ja' oder 'Nein'.")
   return CONFIRM
 
-#def changeTroll(bot, update, user_data):
-  #TODO
+def changeTroll(bot, update, user_data):
+  bot.send_message(chat_id = update.message.chat_id, text = "Die Informationen welches Trolls sollen geändert werden? Schick mir seine ID, eine Nachricht von ihm oder die Nachricht aus dem Channel " + channel + ", in der er erwähnt wird.")
+  return ID
+
+def confirmChangeTroll(bot, update, user_data):
+  if update.message.forward_from != None:
+    user_data['id'] = update.message.forward_from.id
+  elif update.message.forward_from_chat != None:
+    for i in update.message.entities:
+      if i.user != None:
+        user_data['id'] = i.user['id']
+        break
+    if 'id' not in user_data:
+      bot.send_message(chat_id = update.message.chat_id, text = "Ich konnte die Entität des Users nicht feststellen. Bitte beachte, dass ich nur User entfernen kann, die ich auch hinzugefügt habe. Bitte versuch es nochmal.")
+  else:
+    try:
+      user_data['id'] = int(update.message.text)
+    except ValueError:
+      bot.send_message(chat_id = update.message.chat_id, text = "Die ID enthält ungültige Zeichen. Versuch es bitte noch einmal. Zum abbrechen, /cancel eingeben.")
+      return ID
+  if not dbFuncs.isTroll(user_data['id']):
+    bot.send_message(chat_id = update.message.chat_id, text = u"Der User, dessen Informationen ich ändern soll, ist bei mir nicht als Troll abgespeichert. Wenn das ein unerwartetes Verhalten ist, schreibe bitte den Programmierer an oder versuch es noch einmal.", reply_markup = Keyboard(adminKeyboard))
+    return cancel(bot, update, user_data)
+  else:
+    bot.send_message(chat_id = update.message.chat_id, text = dbFuncs.getTroll(user_data['id']))
+    user_data['alias'], user_data['reason'], user_data['channelmsg'] = dbFuncs.getTroll(user_data['id'])
+    user_data['alias'] = user_data['alias'].split(',')
+    bot.send_message(chat_id = update.message.chat_id, text = user_data['alias'])
+    bot.send_message(chat_id = update.message.chat_id, text = "Was möchtest du bei diesem Troll ändern?\nDenk dran, zum abbrechen /cancel eingeben.", reply_markup = Keyboard(['Alias', 'Grund']))
+    return CHANGE
+
+#TODO
+def saveChanges(bot, update, user_data):
+  if update.message.text == 'Ja':
+    try:
+      bot.edit_message_text(chat_id = channel, message_id=user_data['channelmsg'], text = user_data['trolltext'], parse_mode = 'Markdown')
+      dbFuncs.updateTroll(user_data['id'], ','.join(user_data['alias']), user_data['reason'])
+      bot.send_message(chat_id = update.message.chat_id, text = "Die Informationen wurden aktualisiert. Gute Arbeit.", reply_markup = Keyboard(adminKeyboard))
+      user_data.clear()
+      return ConversationHandler.END
+    except Unauthorized:
+      bot.send_message(chat_id = update.message.chat_id, text = "Ich scheine noch keine Berechtigung zu haben, um in den " + channel + " Kanal zu schreiben. Dieses Recht ist notwendig. Die Daten bleiben bis dahin gespeichert, wenn du es erneut versuchen willst, sende einfach wieder 'Ja'.", reply_markup = yesno())
+      return SEND
+  elif update.message.text == 'Nein':
+    bot.send_message(chat_id = update.message.chat_id, text = "Was daran möchtest du nochmal ändern?\nDenk dran, zum abbrechen /cancel eingeben.", reply_markup = Keyboard(['Alias', 'Grund']))
+    return CHANGE
+  bot.send_message(chat_id = update.message. chat_id, text = "Das habe ich nicht verstanden. Bitte antworte mit Ja oder Nein oder sende /cancel um den Vorgang abzubrechen.", reply_markup = yesno())
+  return SEND
+#TODO
 
 def cancel(bot, update, user_data):
   user_data.clear()
@@ -206,9 +253,22 @@ def main(updater):
     fallbacks = [CommandHandler('cancel', cancel, Filters.private, pass_user_data = True)]
   )
 
+  changingTroll = ConversationHandler(
+    entry_points = [CommandHandler('change', changeTroll, filters = Filters.private&Filters.chat(chat_id = dbFuncs.getAdmins()), pass_user_data = True)],
+    states = {
+      ID: [MessageHandler(Filters.private&Filters.chat(chat_id = dbFuncs.getAdmins())&(Filters.text | Filters.forwarded), confirmChangeTroll, pass_user_data = True)],
+      CHANGE: [MessageHandler(Filters.text&Filters.private&Filters.chat(chat_id = dbFuncs.getAdmins()), changeChoice, pass_user_data = True)],
+      ALIAS: [MessageHandler(Filters.text&Filters.private&Filters.chat(chat_id = dbFuncs.getAdmins()), insertAlias, pass_user_data = True)],
+      REASON: [MessageHandler(Filters.text&Filters.private&Filters.chat(chat_id = dbFuncs.getAdmins()), insertReason, pass_user_data = True)],
+      SEND: [MessageHandler(Filters.text&Filters.private&Filters.chat(chat_id = dbFuncs.getAdmins()), saveChanges, pass_user_data = True)]
+    },
+    fallbacks = [CommandHandler('cancel', cancel, Filters.private, pass_user_data = True)]
+  )
+
   dispatcher.add_handler(CommandHandler('start', start))
   dispatcher.add_handler(addingTroll)
   dispatcher.add_handler(removingTroll)
+  dispatcher.add_handler(changingTroll)
   dispatcher.add_handler(CommandHandler('disclaimer', disclaimer))
   dispatcher.add_error_handler(error_callback)
 

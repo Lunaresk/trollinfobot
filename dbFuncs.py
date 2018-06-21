@@ -30,6 +30,18 @@ def insertTroll(id, aka, reason, channelmsg):
     cur.execute("INSERT INTO Trolls(Id, Aka, Reason, Channelmsg) VALUES(%s, %s, %s, %s);", (id, aka, reason, channelmsg))
     conn.commit()
 
+def getTroll(id):
+  with getConn('antitrollbot') as conn:
+    cur = conn.cursor()
+    cur.execute("SELECT Aka, Reason, Channelmsg FROM Trolls WHERE ID = %s;", (id,))
+    return evaluateList(cur.fetchall())
+
+def updateTroll(id, aka, reason):
+  with getConn('antitrollbot') as conn:
+    cur = conn.cursor()
+    cur.execute("UPDATE Trolls SET Aka = %s, Reason = %s WHERE Id = %s;", (aka, reason, id))
+    conn.commit()
+
 def removeTroll(id):
   with getConn('antitrollbot') as conn:
     cur = conn.cursor()
@@ -70,7 +82,8 @@ def isTroll(id):
 def evaluateList(datas):
   list = []
   for i in datas:
-    list.append(i[0])
+    for j in i:
+      list.append(j)
   return list
 
 def evaluateOne(data):
