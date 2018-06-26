@@ -1,4 +1,4 @@
-from telegram import (KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove)
+from telegram import (KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton)
 from telegram.ext import (CommandHandler, MessageHandler, RegexHandler, ConversationHandler, Filters)
 from telegram.error import (Unauthorized, BadRequest)
 from ..errorCallback import error_callback
@@ -11,7 +11,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 ID, ALIAS, REASON, CONFIRM, SEND, CHANGE = range(6)
 adminKeyboard = [u'/add Troll hinzufügen', '/remove Troll entfernen', u'/change Trollinfos ändern']
 userKeyboard = ['/check Bin ich ein Troll?']
-channel = '@ufzfjfhdnfj'
+channel = 'ufzfjfhdnfj'
 
 def start(bot, update):
   bot.send_message(chat_id = update.message.chat_id, text = "Willkommen beim deutschen Anti Troll Bot.\nDie aktive Benutzung ist auf wenige, vertrauenswürdige Personen beschränkt. Administratoren von Gruppen können diesen Bot einladen und werden dann gewarnt, wenn ein vermeintlicher Troll die Gruppe betritt.", reply_markup = Keyboard(userKeyboard))
@@ -19,9 +19,9 @@ def start(bot, update):
     bot.send_message(chat_id = update.message.chat_id, text = "Du gehörst zu den Admins des Bots. Ausschließlich Admins haben das Recht, Trolle in die Datenbank einzutragen.", reply_markup = Keyboard(adminKeyboard))
 
 def disclaimer(bot, update):
-  bot.send_message(chat_id = update.message.chat_id, text = "Dieser Bot ist zur digitalen Unterstützung des Kanals " + channel + " gedacht. Alle Daten, die beim Bot gespeichert werden, werden auch auf dem Kanal hochgeladen. Diese Daten sind nicht dazu gedacht, verarbeitet oder an Dritte weitergeleitet zu werden. Darüber hinaus werden nur ohnehin öffentliche Informationen abgefragt.\nDer Bot und sein Programmierer übernehmen keine Haftung für die Benutzung des Bots. Die Daten werden weder von dem Programmierer eingegeben, noch kann der Programmierer nachvollziehen, von wem sie eingegeben wurden.")
-  bot.send_message(chat_id = update.message.chat_id, text = "Disclaimer Gruppe:\nDiese Gruppe wird durch den @Trollinfobot unterstützt. Durch Beitritt in die Gruppe akzeptieren die Mitglieder, durch starkes, negatives, störendes Auftreten (so genanntes trollen) einen Eintrag in dem Kanal " + channel + " zu riskieren.\nSollte ein schon bekannter Troll die Gruppe betreten, werden die Administratoren der Gruppe privat angeschrieben (sofern möglich) und davor gewarnt.")
-  bot.send_message(chat_id = update.message.chat_id, text = "Disclaimer Privat:\nDurch weiteres privates Anschreiben dieser Art stimmst du zu, wissentlich einen Eintrag in dem Kanal " + channel + " zu riskieren. Solltest du dein Verhalten mir gegenüber nicht anpassen, sehe ich mich gezwungen, die Administration des besagten Kanals auf dich aufmerksam zu machen.")
+  bot.send_message(chat_id = update.message.chat_id, text = "Dieser Bot ist zur digitalen Unterstützung des Kanals @" + channel + " gedacht. Alle Daten, die beim Bot gespeichert werden, werden auch auf dem Kanal hochgeladen. Diese Daten sind nicht dazu gedacht, verarbeitet oder an Dritte weitergeleitet zu werden. Darüber hinaus werden nur ohnehin öffentliche Informationen abgefragt.\nDer Bot und sein Programmierer übernehmen keine Haftung für die Benutzung des Bots. Die Daten werden weder von dem Programmierer eingegeben, noch kann der Programmierer nachvollziehen, von wem sie eingegeben wurden.")
+  bot.send_message(chat_id = update.message.chat_id, text = "Disclaimer Gruppe:\nDiese Gruppe wird durch den @Trollinfobot unterstützt. Durch Beitritt in die Gruppe akzeptieren die Mitglieder, durch starkes, negatives, störendes Auftreten (so genanntes trollen) einen Eintrag in dem Kanal @" + channel + " zu riskieren.\nSollte ein schon bekannter Troll die Gruppe betreten, werden die Administratoren der Gruppe privat angeschrieben (sofern möglich) und davor gewarnt.")
+  bot.send_message(chat_id = update.message.chat_id, text = "Disclaimer Privat:\nDurch weiteres privates Anschreiben dieser Art stimmst du zu, wissentlich einen Eintrag in dem Kanal @" + channel + " zu riskieren. Solltest du dein Verhalten mir gegenüber nicht anpassen, sehe ich mich gezwungen, die Administration des besagten Kanals auf dich aufmerksam zu machen.")
 
 def trollCheck(bot, update):
   bot.send_message(chat_id = update.message.chat_id, text = isTroll(update.message.from_user['id']))
@@ -68,7 +68,7 @@ def insertAlias(bot, update, user_data):
     aliases[i] = aliases[i].strip()
   user_data['alias'] = aliases
   if 'reason' not in user_data:
-    bot.send_message(chat_id = update.message.chat_id , text = "Verstanden. ID und Alias temporär gespeichert. Gib bitte jetzt den Grund ein, wieso er auf die Troll Liste und in den " + channel + " Channel sollte.")
+    bot.send_message(chat_id = update.message.chat_id , text = "Verstanden. ID und Alias temporär gespeichert. Gib bitte jetzt den Grund ein, wieso er auf die Troll Liste und in den @" + channel + " Channel sollte.")
     return REASON
   return trolltextConfirm(bot, update.message.chat_id, user_data)
 
@@ -89,13 +89,13 @@ def trolltextConfirm(bot, chatId, user_data):
 def saveTroll(bot, update, user_data):
   if update.message.text == 'Ja':
     try:
-      channelmsg = bot.send_message(chat_id = channel, text = user_data['trolltext'], parse_mode = 'Markdown').message_id
+      channelmsg = bot.send_message(chat_id = '@'+channel, text = user_data['trolltext'], parse_mode = 'Markdown').message_id
       dbFuncs.insertTroll(user_data['id'], ','.join(user_data['alias']), user_data['reason'], channelmsg)
       bot.send_message(chat_id = update.message.chat_id, text = "Troll ist in der Datenbank gespeichert und im Channel veröffentlicht. Gute Arbeit.", reply_markup = Keyboard(adminKeyboard))
       user_data.clear()
       return ConversationHandler.END
     except Unauthorized:
-      bot.send_message(chat_id = update.message.chat_id, text = "Ich scheine noch keine Berechtigung zu haben, um in den " + channel + " Kanal zu schreiben. Dieses Recht ist notwendig. Die Daten bleiben bis dahin gespeichert, wenn du es erneut versuchen willst, sende einfach wieder 'Ja'.", reply_markup = yesno())
+      bot.send_message(chat_id = update.message.chat_id, text = "Ich scheine noch keine Berechtigung zu haben, um in den @" + channel + " Kanal zu schreiben. Dieses Recht ist notwendig. Die Daten bleiben bis dahin gespeichert, wenn du es erneut versuchen willst, sende einfach wieder 'Ja'.", reply_markup = yesno())
       return SEND
   elif update.message.text == 'Nein':
     bot.send_message(chat_id = update.message.chat_id, text = "Was daran möchtest du nochmal ändern?\nDenk dran, zum abbrechen /cancel eingeben.", reply_markup = Keyboard(['ID', 'Alias', 'Grund']))
@@ -117,7 +117,7 @@ def changeChoice(bot, update, user_data):
   return CHANGE
 
 def removeTroll(bot, update, user_data):
-  bot.send_message(chat_id = update.message.chat_id, text = "Rehabilitation? Welcher Troll soll von der Liste wieder entfernt werden? Gib dafür die ID des Trolls ein, leite eine Nachricht von ihm oder die entsprechende Nachricht aus dem " + channel + " Kanal hier weiter.")
+  bot.send_message(chat_id = update.message.chat_id, text = "Rehabilitation? Welcher Troll soll von der Liste wieder entfernt werden? Gib dafür die ID des Trolls ein, leite eine Nachricht von ihm oder die entsprechende Nachricht aus dem @" + channel + " Kanal hier weiter.")
   return ID
 
 def chooseRemove(bot, update, user_data):
@@ -146,7 +146,7 @@ def confirmRemoval(bot, update, user_data):
   if update.message.text == 'Ja':
     channelmsg = dbFuncs.getMessageFromId(user_data['id'])
     try:
-      bot.delete_message(chat_id = channel, message_id = channelmsg)
+      bot.delete_message(chat_id = '@'+channel, message_id = channelmsg)
       dbFuncs.removeTroll(user_data['id'])
       bot.send_message(chat_id = update.message.chat_id, text = "Troll erfolgreich entfernt.", reply_markup = Keyboard(adminKeyboard))
       user_data.clear()
@@ -161,7 +161,7 @@ def confirmRemoval(bot, update, user_data):
   return CONFIRM
 
 def changeTroll(bot, update, user_data):
-  bot.send_message(chat_id = update.message.chat_id, text = "Die Informationen welches Trolls sollen geändert werden? Schick mir seine ID, eine Nachricht von ihm oder die Nachricht aus dem Channel " + channel + ", in der er erwähnt wird.")
+  bot.send_message(chat_id = update.message.chat_id, text = "Die Informationen welches Trolls sollen geändert werden? Schick mir seine ID, eine Nachricht von ihm oder die Nachricht aus dem Channel @" + channel + ", in der er erwähnt wird.")
   return ID
 
 def confirmChangeTroll(bot, update, user_data):
@@ -191,23 +191,40 @@ def confirmChangeTroll(bot, update, user_data):
     bot.send_message(chat_id = update.message.chat_id, text = "Was möchtest du bei diesem Troll ändern?\nDenk dran, zum abbrechen /cancel eingeben.", reply_markup = Keyboard(['Alias', 'Grund']))
     return CHANGE
 
-#TODO
 def saveChanges(bot, update, user_data):
   if update.message.text == 'Ja':
     try:
-      bot.edit_message_text(chat_id = channel, message_id=user_data['channelmsg'], text = user_data['trolltext'], parse_mode = 'Markdown')
+      bot.edit_message_text(chat_id = '@'+channel, message_id=user_data['channelmsg'], text = user_data['trolltext'], parse_mode = 'Markdown')
       dbFuncs.updateTroll(user_data['id'], ','.join(user_data['alias']), user_data['reason'])
       bot.send_message(chat_id = update.message.chat_id, text = "Die Informationen wurden aktualisiert. Gute Arbeit.", reply_markup = Keyboard(adminKeyboard))
       user_data.clear()
       return ConversationHandler.END
     except Unauthorized:
-      bot.send_message(chat_id = update.message.chat_id, text = "Ich scheine noch keine Berechtigung zu haben, um in den " + channel + " Kanal zu schreiben. Dieses Recht ist notwendig. Die Daten bleiben bis dahin gespeichert, wenn du es erneut versuchen willst, sende einfach wieder 'Ja'.", reply_markup = yesno())
+      bot.send_message(chat_id = update.message.chat_id, text = "Ich scheine noch keine Berechtigung zu haben, um in den @" + channel + " Kanal zu schreiben. Dieses Recht ist notwendig. Die Daten bleiben bis dahin gespeichert, wenn du es erneut versuchen willst, sende einfach wieder 'Ja'.", reply_markup = yesno())
       return SEND
   elif update.message.text == 'Nein':
     bot.send_message(chat_id = update.message.chat_id, text = "Was daran möchtest du nochmal ändern?\nDenk dran, zum abbrechen /cancel eingeben.", reply_markup = Keyboard(['Alias', 'Grund']))
     return CHANGE
   bot.send_message(chat_id = update.message. chat_id, text = "Das habe ich nicht verstanden. Bitte antworte mit Ja oder Nein oder sende /cancel um den Vorgang abzubrechen.", reply_markup = yesno())
   return SEND
+
+#TODO
+def newMember(bot, update):
+  for i in update.message.new_chat_members:
+    print(i)
+    if dbFuncs.isTroll(i.id):
+      admins = bot.get_chat_administrators(update.message.chat_id)
+      admincount = len(admins)
+      for admin in admins:
+        try:
+          if update.message.chat.username != None:
+            bot.send_message(chat_id = admin.user.id, text = 'Ein bekannter [Troll](tg://user?id=' + str(i.id) + ') scheint eure [Gruppe](t.me/' + update.message.chat.username + '/' + str(update.message.message_id) + ') betreten zu haben.', parse_mode='Markdown', reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton(text = 'Zur Channelmeldung', url = 'https://t.me/' + channel + '/' + str(dbFuncs.getTroll(i.id)[2]))]]))
+          else:
+            bot.send_message(chat_id = admin.user.id, text = 'Ein bekannter [Troll](tg://user?id=' + str(i.id) + ') scheint eure Gruppe betreten zu haben.', parse_mode='Markdown', reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton(text = 'Zur Channelmeldung', url = 'https://t.me/' + channel + '/' + str(dbFuncs.getTroll(i.id)[2]))]]))
+        except:
+          --admincount
+#      if admincount == 0:
+#        bot.send_message(chat_id = update.message.chat_id, text = 'Warnung!')
 #TODO
 
 def cancel(bot, update, user_data):
@@ -270,6 +287,7 @@ def main(updater):
   dispatcher.add_handler(removingTroll)
   dispatcher.add_handler(changingTroll)
   dispatcher.add_handler(CommandHandler('disclaimer', disclaimer))
+  dispatcher.add_handler(MessageHandler(Filters.status_update.new_chat_members, newMember))
   dispatcher.add_error_handler(error_callback)
 
   updater.start_polling()
